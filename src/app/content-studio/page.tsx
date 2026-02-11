@@ -24,6 +24,9 @@ import {
 export default function ContentStudio() {
   const [activeTab, setActiveTab] = useState<"talking-points" | "generator" | "saved">("talking-points");
   
+  // Toast notification state
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  
   // Talking Points State
   const [talkingPoints, setTalkingPoints] = useState<TalkingPoint[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -53,11 +56,23 @@ export default function ContentStudio() {
     setSavedSuggestions(getSavedSuggestions());
   }, []);
 
+  // Auto-hide toast after 3 seconds
+  useEffect(() => {
+    if (toastMessage) {
+      const timer = setTimeout(() => setToastMessage(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toastMessage]);
+
+  const showToast = (message: string) => {
+    setToastMessage(message);
+  };
+
   // Talking Points Functions
   const handleAddTalkingPoint = (point: Omit<TalkingPoint, "id" | "createdAt" | "updatedAt">) => {
     const newPoint: TalkingPoint = {
       ...point,
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -125,7 +140,7 @@ export default function ContentStudio() {
     const selectedPoint = selectedPointId ? talkingPoints.find(p => p.id === selectedPointId) : null;
 
     const suggestion: SavedSuggestion = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       content: generatedContent.content,
       contentType,
       tone,
@@ -140,13 +155,19 @@ export default function ContentStudio() {
 
     addSavedSuggestion(suggestion);
     setSavedSuggestions(getSavedSuggestions());
-    alert("Content saved successfully!");
+    setGenerateError(null);
+    showToast("Content saved successfully!");
   };
 
   // Saved Suggestions Functions
-  const handleCopyToClipboard = (content: string) => {
-    navigator.clipboard.writeText(content);
-    alert("Copied to clipboard!");
+  const handleCopyToClipboard = async (content: string) => {
+    try {
+      await navigator.clipboard.writeText(content);
+      showToast("Copied to clipboard!");
+    } catch (err) {
+      console.error("Failed to copy to clipboard:", err);
+      showToast("Failed to copy to clipboard");
+    }
   };
 
   const handleDeleteSuggestion = (id: string) => {
@@ -278,6 +299,13 @@ export default function ContentStudio() {
           </div>
         </div>
       </div>
+
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-4 right-4 bg-zinc-900 dark:bg-zinc-700 text-white px-6 py-3 rounded-lg shadow-lg animate-fade-in z-50">
+          {toastMessage}
+        </div>
+      )}
     </div>
   );
 }

@@ -140,8 +140,7 @@ function generateMockContent(request: ContentGenerationRequest): ParsedResponse 
   };
 
   const contentMap = mockContent.post;
-  const toneKey = tone.replace(/_/g, "") as keyof typeof contentMap;
-  const content = contentMap[toneKey as keyof typeof contentMap] || contentMap.professional;
+  const content = contentMap[tone as keyof typeof contentMap] || contentMap.professional;
 
   const hooks = [
     `${topic}: What you need to know in 2024`,
