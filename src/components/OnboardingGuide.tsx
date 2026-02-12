@@ -11,14 +11,19 @@ interface OnboardingStep {
 
 const ONBOARDING_KEY = "linkedin_tracker_onboarding_complete";
 
-export default function OnboardingGuide() {
-  const [isVisible, setIsVisible] = useState(false);
-  const [steps, setSteps] = useState<OnboardingStep[]>([
+function getInitialVisibility() {
+  if (typeof window === "undefined") return false;
+  return !localStorage.getItem(ONBOARDING_KEY);
+}
+
+function getInitialSteps() {
+  const hasApiKey = !!process.env.NEXT_PUBLIC_DEMO_API_KEY;
+  return [
     {
       id: "connect",
       title: "Connect LinkedIn Account",
       description: "Set up your API key to start tracking activity",
-      completed: false,
+      completed: hasApiKey,
     },
     {
       id: "first-activity",
@@ -44,25 +49,15 @@ export default function OnboardingGuide() {
       description: "Complete activities to unlock achievements",
       completed: false,
     },
-  ]);
+  ];
+}
+
+export default function OnboardingGuide() {
+  const [isVisible, setIsVisible] = useState(getInitialVisibility);
+  const [steps, setSteps] = useState<OnboardingStep[]>(getInitialSteps);
 
   useEffect(() => {
-    // Check if onboarding has been completed
-    const isComplete = localStorage.getItem(ONBOARDING_KEY);
-    if (!isComplete) {
-      setIsVisible(true);
-    }
-
-    // Check which steps might already be completed
-    // This is a simple heuristic - in a real app, you'd check actual completion status
-    const hasApiKey = !!process.env.NEXT_PUBLIC_DEMO_API_KEY;
-    if (hasApiKey) {
-      setSteps((prev) =>
-        prev.map((step) =>
-          step.id === "connect" ? { ...step, completed: true } : step
-        )
-      );
-    }
+    // No state updates needed in this effect
   }, []);
 
   const handleStepComplete = (stepId: string) => {

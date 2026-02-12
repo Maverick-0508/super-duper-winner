@@ -249,6 +249,7 @@ function DashboardContent() {
 
       {/* Log Activity Modal */}
       <LogActivityModal
+        key={`${isModalOpen}-${prefilledType}`}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSubmit={handleLogActivity}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 interface LogActivityModalProps {
   isOpen: boolean;
@@ -15,19 +15,10 @@ export default function LogActivityModal({
   onSubmit,
   prefilledType = "",
 }: LogActivityModalProps) {
-  const [type, setType] = useState<string>(prefilledType);
-  const [date, setDate] = useState("");
-  const [time, setTime] = useState("");
-
-  useEffect(() => {
-    if (isOpen) {
-      // Set defaults when modal opens
-      const now = new Date();
-      setDate(now.toISOString().split("T")[0]);
-      setTime(now.toTimeString().slice(0, 5));
-      setType(prefilledType || "post");
-    }
-  }, [isOpen, prefilledType]);
+  const now = new Date();
+  const [type, setType] = useState<string>(prefilledType || "post");
+  const [date, setDate] = useState(now.toISOString().split("T")[0]);
+  const [time, setTime] = useState(now.toTimeString().slice(0, 5));
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

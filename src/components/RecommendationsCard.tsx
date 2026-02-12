@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useMemo } from "react";
 
 interface Recommendation {
   id: string;
@@ -19,162 +19,168 @@ interface RecommendationsCardProps {
   onAction?: (actionType: string, recommendation: Recommendation) => void;
 }
 
+function generateRecommendations(
+  activityCount: number,
+  lastActivityDate?: string
+): Recommendation[] {
+  const recommendations: Recommendation[] = [];
+
+  // Posting frequency suggestions
+  if (activityCount < 5) {
+    recommendations.push({
+      id: "freq-1",
+      type: "frequency",
+      title: "Increase Posting Frequency",
+      description: "Post at least 3 times this week to boost your LinkedIn presence",
+      priority: "high",
+      progress: (activityCount / 5) * 100,
+      action: "Log a Post",
+      actionType: "log-post",
+    });
+  } else if (activityCount >= 5 && activityCount < 20) {
+    recommendations.push({
+      id: "freq-2",
+      type: "frequency",
+      title: "Great Progress!",
+      description: "You're building momentum. Try to post 5 times this week.",
+      priority: "medium",
+      progress: (activityCount / 20) * 100,
+      action: "Log a Post",
+      actionType: "log-post",
+    });
+  }
+
+  // Engagement tips
+  if (activityCount > 0) {
+    recommendations.push({
+      id: "engage-1",
+      type: "engagement",
+      title: "Engage with Others",
+      description: "Comment on 3 posts today to increase visibility and build relationships",
+      priority: "high",
+      progress: 0,
+      action: "Log a Comment",
+      actionType: "log-comment",
+    });
+  }
+
+  // Network growth advice
+  recommendations.push({
+    id: "network-1",
+    type: "network",
+    title: "Grow Your Network",
+    description: "React to posts in your industry to stay visible and attract connections",
+    priority: "medium",
+    progress: 0,
+    action: "Log a Reaction",
+    actionType: "log-reaction",
+  });
+
+  // Streak maintenance alerts
+  if (lastActivityDate) {
+    const lastDate = new Date(lastActivityDate);
+    const now = new Date();
+    const daysSince = Math.floor((now.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (daysSince === 0) {
+      recommendations.push({
+        id: "streak-1",
+        type: "streak",
+        title: "Keep Your Streak Alive! 🔥",
+        description: "You posted today! Come back tomorrow to maintain your streak.",
+        priority: "low",
+        progress: 100,
+      });
+    } else if (daysSince === 1) {
+      recommendations.push({
+        id: "streak-2",
+        type: "streak",
+        title: "Don't Break Your Streak!",
+        description: "You haven't posted yet today. Log an activity to keep your streak going!",
+        priority: "high",
+        progress: 50,
+        action: "Log Activity",
+        actionType: "log-post",
+      });
+    } else if (daysSince > 1) {
+      recommendations.push({
+        id: "streak-3",
+        type: "streak",
+        title: "Start a New Streak",
+        description: `It's been ${daysSince} days since your last activity. Start fresh today!`,
+        priority: "high",
+        progress: 0,
+        action: "Log Activity",
+        actionType: "log-post",
+      });
+    }
+  }
+
+  // Achievement proximity notifications
+  if (activityCount === 8 || activityCount === 9) {
+    recommendations.push({
+      id: "achieve-1",
+      type: "achievement",
+      title: "Almost There! 🏆",
+      description: `Only ${10 - activityCount} more ${activityCount === 9 ? 'activity' : 'activities'} until you unlock the "Getting Started" achievement!`,
+      priority: "high",
+      progress: (activityCount / 10) * 100,
+      action: "Log Activity",
+      actionType: "log-post",
+    });
+  }
+
+  // Best posting time insights
+  const hour = new Date().getHours();
+  if (hour >= 9 && hour <= 11) {
+    recommendations.push({
+      id: "timing-1",
+      type: "timing",
+      title: "Prime Time to Post! ⏰",
+      description: "9-11 AM is peak engagement time. Post now for maximum visibility!",
+      priority: "medium",
+      progress: 0,
+      action: "Log a Post Now",
+      actionType: "log-post",
+    });
+  } else if (hour >= 13 && hour <= 15) {
+    recommendations.push({
+      id: "timing-2",
+      type: "timing",
+      title: "Good Time to Post",
+      description: "1-3 PM is a good time for engagement. Consider posting an update!",
+      priority: "low",
+      progress: 0,
+      action: "Log a Post",
+      actionType: "log-post",
+    });
+  }
+
+  // Open LinkedIn reminder
+  recommendations.push({
+    id: "linkedin-1",
+    type: "engagement",
+    title: "Visit LinkedIn",
+    description: "Open LinkedIn to discover new content and engage with your network",
+    priority: "low",
+    progress: 0,
+    action: "Open LinkedIn",
+    actionType: "external",
+  });
+
+  return recommendations;
+}
+
 export default function RecommendationsCard({
   activityCount = 0,
   lastActivityDate,
   onAction,
 }: RecommendationsCardProps) {
-  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
-
-  useEffect(() => {
-    // Generate smart recommendations based on activity patterns
-    const newRecommendations: Recommendation[] = [];
-
-    // Posting frequency suggestions
-    if (activityCount < 5) {
-      newRecommendations.push({
-        id: "freq-1",
-        type: "frequency",
-        title: "Increase Posting Frequency",
-        description: "Post at least 3 times this week to boost your LinkedIn presence",
-        priority: "high",
-        progress: (activityCount / 5) * 100,
-        action: "Log a Post",
-        actionType: "log-post",
-      });
-    } else if (activityCount >= 5 && activityCount < 20) {
-      newRecommendations.push({
-        id: "freq-2",
-        type: "frequency",
-        title: "Great Progress!",
-        description: "You're building momentum. Try to post 5 times this week.",
-        priority: "medium",
-        progress: (activityCount / 20) * 100,
-        action: "Log a Post",
-        actionType: "log-post",
-      });
-    }
-
-    // Engagement tips
-    if (activityCount > 0) {
-      newRecommendations.push({
-        id: "engage-1",
-        type: "engagement",
-        title: "Engage with Others",
-        description: "Comment on 3 posts today to increase visibility and build relationships",
-        priority: "high",
-        progress: 0,
-        action: "Log a Comment",
-        actionType: "log-comment",
-      });
-    }
-
-    // Network growth advice
-    newRecommendations.push({
-      id: "network-1",
-      type: "network",
-      title: "Grow Your Network",
-      description: "React to posts in your industry to stay visible and attract connections",
-      priority: "medium",
-      progress: 0,
-      action: "Log a Reaction",
-      actionType: "log-reaction",
-    });
-
-    // Streak maintenance alerts
-    if (lastActivityDate) {
-      const lastDate = new Date(lastActivityDate);
-      const now = new Date();
-      const daysSince = Math.floor((now.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
-      
-      if (daysSince === 0) {
-        newRecommendations.push({
-          id: "streak-1",
-          type: "streak",
-          title: "Keep Your Streak Alive! 🔥",
-          description: "You posted today! Come back tomorrow to maintain your streak.",
-          priority: "low",
-          progress: 100,
-        });
-      } else if (daysSince === 1) {
-        newRecommendations.push({
-          id: "streak-2",
-          type: "streak",
-          title: "Don't Break Your Streak!",
-          description: "You haven't posted yet today. Log an activity to keep your streak going!",
-          priority: "high",
-          progress: 50,
-          action: "Log Activity",
-          actionType: "log-post",
-        });
-      } else if (daysSince > 1) {
-        newRecommendations.push({
-          id: "streak-3",
-          type: "streak",
-          title: "Start a New Streak",
-          description: `It's been ${daysSince} days since your last activity. Start fresh today!`,
-          priority: "high",
-          progress: 0,
-          action: "Log Activity",
-          actionType: "log-post",
-        });
-      }
-    }
-
-    // Achievement proximity notifications
-    if (activityCount === 8 || activityCount === 9) {
-      newRecommendations.push({
-        id: "achieve-1",
-        type: "achievement",
-        title: "Almost There! 🏆",
-        description: `Only ${10 - activityCount} more ${activityCount === 9 ? 'activity' : 'activities'} until you unlock the "Getting Started" achievement!`,
-        priority: "high",
-        progress: (activityCount / 10) * 100,
-        action: "Log Activity",
-        actionType: "log-post",
-      });
-    }
-
-    // Best posting time insights
-    const hour = new Date().getHours();
-    if (hour >= 9 && hour <= 11) {
-      newRecommendations.push({
-        id: "timing-1",
-        type: "timing",
-        title: "Prime Time to Post! ⏰",
-        description: "9-11 AM is peak engagement time. Post now for maximum visibility!",
-        priority: "medium",
-        progress: 0,
-        action: "Log a Post Now",
-        actionType: "log-post",
-      });
-    } else if (hour >= 13 && hour <= 15) {
-      newRecommendations.push({
-        id: "timing-2",
-        type: "timing",
-        title: "Good Time to Post",
-        description: "1-3 PM is a good time for engagement. Consider posting an update!",
-        priority: "low",
-        progress: 0,
-        action: "Log a Post",
-        actionType: "log-post",
-      });
-    }
-
-    // Open LinkedIn reminder
-    newRecommendations.push({
-      id: "linkedin-1",
-      type: "engagement",
-      title: "Visit LinkedIn",
-      description: "Open LinkedIn to discover new content and engage with your network",
-      priority: "low",
-      progress: 0,
-      action: "Open LinkedIn",
-      actionType: "external",
-    });
-
-    setRecommendations(newRecommendations);
-  }, [activityCount, lastActivityDate]);
+  // Use useMemo to compute recommendations based on props
+  const recommendations = useMemo(
+    () => generateRecommendations(activityCount, lastActivityDate),
+    [activityCount, lastActivityDate]
+  );
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {

@@ -59,19 +59,21 @@ export function FullPageLoading({ message = "Loading..." }: { message?: string }
   );
 }
 
+const barHeights = [85, 60, 95, 70, 80, 65, 90]; // Pre-calculated heights
+
 export function GraphLoadingPlaceholder() {
   return (
     <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-lg p-6">
       <div className="animate-pulse">
         <div className="h-6 bg-zinc-200 dark:bg-zinc-700 rounded w-1/3 mb-6"></div>
         <div className="h-64 bg-zinc-100 dark:bg-zinc-700 rounded flex items-end justify-around p-4 space-x-2">
-          {Array.from({ length: 7 }).map((_, i) => (
+          {barHeights.map((height, i) => (
             <div
               key={i}
               className="bg-zinc-200 dark:bg-zinc-600 rounded-t"
               style={{
                 width: "12%",
-                height: `${Math.random() * 60 + 40}%`,
+                height: `${height}%`,
               }}
             ></div>
           ))}
