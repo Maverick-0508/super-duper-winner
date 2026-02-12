@@ -1,16 +1,25 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import ErrorBoundary from "@/components/ErrorBoundary";
+import OnboardingGuide from "@/components/OnboardingGuide";
+import RecommendationsCard from "@/components/RecommendationsCard";
+import EmptyState from "@/components/EmptyState";
+import { Spinner, SkeletonList } from "@/components/LoadingState";
+import LogActivityModal from "@/components/LogActivityModal";
 
 interface DailyActivity {
   day: string;
   count: number;
 }
 
-export default function Home() {
+function DashboardContent() {
   const [activity, setActivity] = useState<DailyActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [prefilledType, setPrefilledType] = useState<"post" | "comment" | "reaction" | "">("");
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     async function fetchActivity() {
@@ -49,26 +58,151 @@ export default function Home() {
     }
 
     fetchActivity();
-  }, []);
+  }, [refreshKey]);
+
+  // Calculate stats for recommendations
+  const totalActivities = activity.reduce((sum, item) => sum + item.count, 0);
+  const lastActivityDate = activity.length > 0 ? activity[activity.length - 1].day : undefined;
+
+  const handleRecommendationAction = (actionType: string) => {
+    const typeMap: { [key: string]: "post" | "comment" | "reaction" } = {
+      "log-post": "post",
+      "log-comment": "comment",
+      "log-reaction": "reaction",
+    };
+
+    if (actionType in typeMap) {
+      setPrefilledType(typeMap[actionType]);
+      setIsModalOpen(true);
+    }
+  };
+
+  const handleLogActivity = async (type: string, timestamp: string) => {
+    try {
+      const apiKey = process.env.NEXT_PUBLIC_DEMO_API_KEY;
+      if (!apiKey) {
+        alert("API key not configured");
+        return;
+      }
+
+      const response = await fetch("/api/events", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          apiKey,
+          type,
+          timestamp,
+          source: "linkedin",
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to log activity");
+      }
+
+      // Refresh activity data
+      setRefreshKey((prev) => prev + 1);
+      alert("Activity logged successfully!");
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to log activity");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900 py-12 px-4">
       <main className="max-w-4xl mx-auto">
-        <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-lg p-8">
-          <h1 className="text-4xl font-bold text-zinc-900 dark:text-zinc-50 mb-2">
-            LinkedIn Activity Dashboard (MVP)
-          </h1>
-          
+        {/* Onboarding Guide */}
+        <OnboardingGuide />
+
+        {/* Header with Quick Actions */}
+        <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-lg p-8 mb-6">
+          <div className="flex justify-between items-start mb-2">
+            <h1 className="text-4xl font-bold text-zinc-900 dark:text-zinc-50">
+              LinkedIn Activity Dashboard
+            </h1>
+            <div className="flex gap-2">
+              <a
+                href="https://www.linkedin.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium transition-colors text-sm"
+                title="Open LinkedIn in a new tab"
+              >
+                Open LinkedIn →
+              </a>
+              <button
+                onClick={() => {
+                  setPrefilledType("");
+                  setIsModalOpen(true);
+                }}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md font-medium transition-colors text-sm"
+                title="Log a new activity"
+              >
+                + Log Activity
+              </button>
+            </div>
+          </div>
+
           <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md">
             <p className="text-sm text-amber-800 dark:text-amber-200">
               ⚠️ <strong>Note:</strong> Data is stored only in memory and will be cleared on server restart.
             </p>
           </div>
 
+          {/* Stats Summary */}
+          {!loading && !error && (
+            <div className="grid grid-cols-3 gap-4 mb-4">
+              <div className="bg-zinc-50 dark:bg-zinc-700 rounded-lg p-4 text-center">
+                <div className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
+                  {totalActivities}
+                </div>
+                <div className="text-sm text-zinc-600 dark:text-zinc-400">
+                  Total Activities
+                </div>
+              </div>
+              <div className="bg-zinc-50 dark:bg-zinc-700 rounded-lg p-4 text-center">
+                <div className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
+                  {activity.length}
+                </div>
+                <div className="text-sm text-zinc-600 dark:text-zinc-400">
+                  Active Days
+                </div>
+              </div>
+              <div className="bg-zinc-50 dark:bg-zinc-700 rounded-lg p-4 text-center">
+                <div className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
+                  {activity.length > 0 ? (totalActivities / activity.length).toFixed(1) : 0}
+                </div>
+                <div className="text-sm text-zinc-600 dark:text-zinc-400">
+                  Avg per Day
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Smart Recommendations */}
+        {!loading && !error && (
+          <RecommendationsCard
+            activityCount={totalActivities}
+            lastActivityDate={lastActivityDate}
+            onAction={handleRecommendationAction}
+          />
+        )}
+
+        {/* Activity List */}
+        <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-lg p-8">
+          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50 mb-4">
+            Daily Activity (Last 60 Days)
+          </h2>
+
           {loading && (
-            <div className="text-center py-12">
-              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-zinc-900 dark:border-zinc-50"></div>
-              <p className="mt-4 text-zinc-600 dark:text-zinc-400">Loading activity...</p>
+            <div>
+              <div className="text-center py-6 mb-4">
+                <Spinner />
+                <p className="mt-4 text-zinc-600 dark:text-zinc-400">Loading activity...</p>
+              </div>
+              <SkeletonList count={5} />
             </div>
           )}
 
@@ -82,20 +216,21 @@ export default function Home() {
 
           {!loading && !error && (
             <div>
-              <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50 mb-4">
-                Daily Activity (Last 60 Days)
-              </h2>
-              
               {activity.length === 0 ? (
-                <p className="text-zinc-600 dark:text-zinc-400 py-8 text-center">
-                  No activity recorded yet. Start by posting events to the API!
-                </p>
+                <EmptyState
+                  type="activity"
+                  onAction={() => {
+                    setPrefilledType("");
+                    setIsModalOpen(true);
+                  }}
+                />
               ) : (
                 <div className="space-y-2">
                   {activity.map((item) => (
                     <div
                       key={item.day}
                       className="flex justify-between items-center p-3 bg-zinc-50 dark:bg-zinc-700 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-600 transition-colors"
+                      title={`${item.count} ${item.count === 1 ? "activity" : "activities"} on ${item.day}`}
                     >
                       <span className="font-medium text-zinc-900 dark:text-zinc-50">
                         {item.day}
@@ -111,6 +246,23 @@ export default function Home() {
           )}
         </div>
       </main>
+
+      {/* Log Activity Modal - key prop ensures fresh state when opening with different prefilled types */}
+      <LogActivityModal
+        key={isModalOpen ? `modal-${prefilledType}` : "modal-closed"}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={handleLogActivity}
+        prefilledType={prefilledType}
+      />
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <ErrorBoundary>
+      <DashboardContent />
+    </ErrorBoundary>
   );
 }
