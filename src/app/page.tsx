@@ -171,7 +171,7 @@ function DashboardContent() {
               </div>
               <div className="bg-zinc-50 dark:bg-zinc-700 rounded-lg p-4 text-center">
                 <div className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
-                  {activity.length > 0 ? Math.round(totalActivities / activity.length * 10) / 10 : 0}
+                  {activity.length > 0 ? (totalActivities / activity.length).toFixed(1) : 0}
                 </div>
                 <div className="text-sm text-zinc-600 dark:text-zinc-400">
                   Avg per Day
@@ -247,9 +247,9 @@ function DashboardContent() {
         </div>
       </main>
 
-      {/* Log Activity Modal */}
+      {/* Log Activity Modal - key prop ensures fresh state when opening with different prefilled types */}
       <LogActivityModal
-        key={`${isModalOpen}-${prefilledType}`}
+        key={isModalOpen ? `modal-${prefilledType}` : "modal-closed"}
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSubmit={handleLogActivity}

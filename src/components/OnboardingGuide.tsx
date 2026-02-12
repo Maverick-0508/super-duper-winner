@@ -56,10 +56,6 @@ export default function OnboardingGuide() {
   const [isVisible, setIsVisible] = useState(getInitialVisibility);
   const [steps, setSteps] = useState<OnboardingStep[]>(getInitialSteps);
 
-  useEffect(() => {
-    // No state updates needed in this effect
-  }, []);
-
   const handleStepComplete = (stepId: string) => {
     setSteps((prev) =>
       prev.map((step) =>
@@ -83,9 +79,10 @@ export default function OnboardingGuide() {
   useEffect(() => {
     if (allCompleted && isVisible) {
       // Auto-dismiss when all steps are complete
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         handleComplete();
       }, 2000);
+      return () => clearTimeout(timer);
     }
   }, [allCompleted, isVisible]);
 
