@@ -83,10 +83,7 @@ export async function GET(request: NextRequest) {
     .sort((a, b) => a.day.localeCompare(b.day));
 
   // Calculate current streak
-  const dailyCountsRecord: Record<string, number> = {};
-  dailyCountsMap.forEach((count, day) => {
-    dailyCountsRecord[day] = count;
-  });
+  const dailyCountsRecord: Record<string, number> = Object.fromEntries(dailyCountsMap);
   const currentStreak = calculateCurrentStreak(dailyCountsRecord);
 
   return NextResponse.json({

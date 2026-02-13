@@ -39,7 +39,9 @@ export function addEvent(event: Event): boolean {
     if (existingEvent.type !== event.type) return false;
     if (existingEvent.source !== event.source) return false;
     
-    const existingDayKey = existingEvent.timestamp.split('T')[0];
+    // Normalize existing event timestamp in case it wasn't normalized before
+    const normalizedExistingTimestamp = new Date(existingEvent.timestamp).toISOString();
+    const existingDayKey = normalizedExistingTimestamp.split('T')[0];
     return existingDayKey === dayKey;
   });
   
