@@ -17,10 +17,43 @@ export interface Event {
 const events: Event[] = [];
 
 /**
- * Add a new event to the store
+ * Add a new event to the store.
+ * Returns true if the event was added, false if it was a duplicate.
+ * 
+ * Duplicate criteria:
+ * - Same userId
+ * - Same type
+ * - Same source
+ * - Same calendar day (YYYY-MM-DD)
  */
-export function addEvent(event: Event): void {
-  events.push(event);
+export function addEvent(event: Event): boolean {
+  // Normalize timestamp to ISO format
+  const normalizedTimestamp = new Date(event.timestamp).toISOString();
+  
+  // Extract day key (YYYY-MM-DD) from timestamp
+  const dayKey = normalizedTimestamp.split('T')[0];
+  
+  // Check for duplicate: same userId, type, source, and day
+  const isDuplicate = events.some((existingEvent) => {
+    if (existingEvent.userId !== event.userId) return false;
+    if (existingEvent.type !== event.type) return false;
+    if (existingEvent.source !== event.source) return false;
+    
+    const existingDayKey = existingEvent.timestamp.split('T')[0];
+    return existingDayKey === dayKey;
+  });
+  
+  if (isDuplicate) {
+    return false; // Duplicate found, do not add
+  }
+  
+  // Not a duplicate, add the event with normalized timestamp
+  events.push({
+    ...event,
+    timestamp: normalizedTimestamp,
+  });
+  
+  return true; // Successfully added
 }
 
 /**
