@@ -53,8 +53,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Set source default to "linkedin"
-    const eventSource = source || "linkedin";
+    // Set source default to "extension"
+    const eventSource = source || "extension";
 
     // Store the event (returns object with stored and duplicate flags)
     const result = addEvent({

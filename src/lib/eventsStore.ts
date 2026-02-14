@@ -45,9 +45,16 @@ export function toIsoTimestamp(raw: string | Date): string {
 
 /**
  * Extract YYYY-MM-DD from an ISO timestamp
+ * Validates that the input is in ISO format before extracting
  */
 export function dayKeyFromTimestamp(timestamp: string): string {
-  return timestamp.split('T')[0];
+  // Validate and normalize to ISO format first
+  const date = new Date(timestamp);
+  if (isNaN(date.getTime())) {
+    throw new Error(`Invalid timestamp for day key extraction: ${timestamp}`);
+  }
+  // Use the validated Date object to extract day key
+  return date.toISOString().split('T')[0];
 }
 
 /**
