@@ -13,8 +13,14 @@ interface DailyActivity {
   count: number;
 }
 
+interface ActivityResponse {
+  daily: DailyActivity[];
+  currentStreak: number;
+}
+
 function DashboardContent() {
   const [activity, setActivity] = useState<DailyActivity[]>([]);
+  const [currentStreak, setCurrentStreak] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -48,8 +54,9 @@ function DashboardContent() {
           throw new Error(errorData.error || "Failed to fetch activity");
         }
 
-        const data = await response.json();
-        setActivity(data);
+        const data: ActivityResponse = await response.json();
+        setActivity(data.daily);
+        setCurrentStreak(data.currentStreak);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unknown error");
       } finally {
@@ -152,7 +159,7 @@ function DashboardContent() {
 
           {/* Stats Summary */}
           {!loading && !error && (
-            <div className="grid grid-cols-3 gap-4 mb-4">
+            <div className="grid grid-cols-4 gap-4 mb-4">
               <div className="bg-zinc-50 dark:bg-zinc-700 rounded-lg p-4 text-center">
                 <div className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
                   {totalActivities}
@@ -175,6 +182,14 @@ function DashboardContent() {
                 </div>
                 <div className="text-sm text-zinc-600 dark:text-zinc-400">
                   Avg per Day
+                </div>
+              </div>
+              <div className="bg-zinc-50 dark:bg-zinc-700 rounded-lg p-4 text-center">
+                <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">
+                  {currentStreak}
+                </div>
+                <div className="text-sm text-zinc-600 dark:text-zinc-400">
+                  Current Streak 🔥
                 </div>
               </div>
             </div>

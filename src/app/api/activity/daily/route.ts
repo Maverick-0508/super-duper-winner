@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getEvents, EventType } from "@/lib/eventsStore";
 import { getUserIdFromApiKey } from "@/lib/authApiKey";
+import { calculateCurrentStreak } from "@/lib/streak";
 
 interface DailyActivity {
   day: string; // YYYY-MM-DD
@@ -81,5 +82,12 @@ export async function GET(request: NextRequest) {
   ).map(([day, count]) => ({ day, count }))
     .sort((a, b) => a.day.localeCompare(b.day));
 
-  return NextResponse.json(dailyActivity);
+  // Calculate current streak
+  const dailyCountsRecord: Record<string, number> = Object.fromEntries(dailyCountsMap);
+  const currentStreak = calculateCurrentStreak(dailyCountsRecord);
+
+  return NextResponse.json({
+    daily: dailyActivity,
+    currentStreak,
+  });
 }

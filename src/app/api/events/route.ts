@@ -36,9 +36,19 @@ export async function POST(request: NextRequest) {
     const eventTimestamp = timestamp || new Date().toISOString();
 
     // Validate timestamp format
-    if (isNaN(new Date(eventTimestamp).getTime())) {
+    const eventDate = new Date(eventTimestamp);
+    if (isNaN(eventDate.getTime())) {
       return NextResponse.json(
         { error: "Invalid timestamp format. Use ISO 8601 format." },
+        { status: 400 }
+      );
+    }
+
+    // Validate that timestamp is not in the future
+    const now = new Date();
+    if (eventDate > now) {
+      return NextResponse.json(
+        { error: "Timestamp cannot be in the future" },
         { status: 400 }
       );
     }
@@ -46,15 +56,22 @@ export async function POST(request: NextRequest) {
     // Set source default to "linkedin"
     const eventSource = source || "linkedin";
 
-    // Store the event
-    addEvent({
+    // Store the event (returns false if duplicate)
+    const wasAdded = addEvent({
       userId,
       type,
       timestamp: eventTimestamp,
       source: eventSource,
     });
 
-    return NextResponse.json({ success: true }, { status: 201 });
+    // Return success response with duplicate flag
+    return NextResponse.json(
+      { 
+        success: true, 
+        duplicate: !wasAdded 
+      }, 
+      { status: wasAdded ? 201 : 200 }
+    );
   } catch (error) {
     console.error("Error processing event:", error);
     return NextResponse.json(
