@@ -56,8 +56,8 @@ export async function POST(request: NextRequest) {
     // Set source default to "linkedin"
     const eventSource = source || "linkedin";
 
-    // Store the event (returns false if duplicate)
-    const wasAdded = addEvent({
+    // Store the event (returns object with stored and duplicate flags)
+    const result = addEvent({
       userId,
       type,
       timestamp: eventTimestamp,
@@ -68,9 +68,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { 
         success: true, 
-        duplicate: !wasAdded 
+        duplicate: result.duplicate 
       }, 
-      { status: wasAdded ? 201 : 200 }
+      { status: result.stored ? 201 : 200 }
     );
   } catch (error) {
     console.error("Error processing event:", error);

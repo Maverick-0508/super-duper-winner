@@ -5,9 +5,13 @@
 
 /**
  * Validate API key and return associated user ID
- * Returns null if the API key is invalid
+ * Returns null if the API key is invalid or undefined
  */
-export function getUserIdFromApiKey(apiKey: string): string | null {
+export function getUserIdFromApiKey(apiKey: string | undefined): string | null {
+  if (!apiKey) {
+    return null;
+  }
+  
   const demoApiKey = process.env.DEMO_API_KEY;
   
   if (!demoApiKey) {
