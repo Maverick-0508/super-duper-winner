@@ -1,5 +1,8 @@
 // options.js - Handle options page functionality
 
+// Constants
+const STATUS_DISPLAY_DURATION_MS = 2000;
+
 // DOM elements
 let apiKeyInput, eventTypeSelect, timestampInput, sourceSelect, externalIdInput;
 let saveApiKeyBtn, simulateEventBtn, statusDiv;
@@ -32,7 +35,7 @@ function loadApiKey() {
     if (result.apiKey) {
       apiKeyInput.value = result.apiKey;
       showStatus('API key loaded successfully', 'success');
-      setTimeout(() => hideStatus(), 2000);
+      setTimeout(() => hideStatus(), STATUS_DISPLAY_DURATION_MS);
     }
   });
 }
