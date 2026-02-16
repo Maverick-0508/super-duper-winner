@@ -96,7 +96,7 @@ async function handleSimulateEvent(payload) {
     let errorMessage = error.message;
     
     // Provide more helpful error messages for common issues
-    if (error.message.includes('Failed to fetch')) {
+    if (error instanceof TypeError && (error.message.includes('fetch') || error.message.includes('Failed to fetch') || error.message.includes('NetworkError'))) {
       errorMessage = 'Cannot connect to backend server. Make sure the server is running at ' + BACKEND_URL;
     }
 

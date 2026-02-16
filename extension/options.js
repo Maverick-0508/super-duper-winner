@@ -60,7 +60,7 @@ function saveApiKey() {
 /**
  * Simulate an event by sending message to background script
  */
-async function simulateEvent() {
+function simulateEvent() {
   const eventType = eventTypeSelect.value;
   
   // Validation
