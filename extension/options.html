@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LinkedIn Activity Tracker - Options</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 16px;
+      padding: 40px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+      font-size: 28px;
+    }
+
+    .subtitle {
+      color: #666;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+
+    .section {
+      margin-bottom: 30px;
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 15px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #667eea;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: #555;
+      font-weight: 500;
+      font-size: 14px;
+    }
+
+    input[type="text"],
+    input[type="password"],
+    input[type="datetime-local"],
+    select {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: border-color 0.3s;
+    }
+
+    input[type="text"]:focus,
+    input[type="password"]:focus,
+    input[type="datetime-local"]:focus,
+    select:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .helper-text {
+      font-size: 12px;
+      color: #888;
+      margin-top: 4px;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 12px;
+      margin-top: 25px;
+    }
+
+    button {
+      flex: 1;
+      padding: 14px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-secondary {
+      background: #f5f5f5;
+      color: #333;
+    }
+
+    .btn-secondary:hover {
+      background: #e0e0e0;
+    }
+
+    #status {
+      margin-top: 20px;
+      padding: 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      display: none;
+      animation: slideIn 0.3s ease-out;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    #status.success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+      display: block;
+    }
+
+    #status.error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+      display: block;
+    }
+
+    #status.info {
+      background: #d1ecf1;
+      color: #0c5460;
+      border: 1px solid #bee5eb;
+      display: block;
+    }
+
+    #status.warning {
+      background: #fff3cd;
+      color: #856404;
+      border: 1px solid #ffeaa7;
+      display: block;
+    }
+
+    .divider {
+      height: 1px;
+      background: #e0e0e0;
+      margin: 30px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎯 LinkedIn Activity Tracker</h1>
+    <p class="subtitle">Configure your API key and simulate activity events for testing</p>
+
+    <!-- API Key Section -->
+    <div class="section">
+      <h2 class="section-title">API Configuration</h2>
+      <div class="form-group">
+        <label for="apiKey">API Key</label>
+        <input type="password" id="apiKey" placeholder="Enter your API key">
+        <div class="helper-text">This will be saved securely in your browser</div>
+      </div>
+      <div class="button-group">
+        <button type="button" class="btn-secondary" id="saveApiKey">💾 Save API Key</button>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Simulate Event Section -->
+    <div class="section">
+      <h2 class="section-title">Simulate Event</h2>
+      
+      <div class="form-group">
+        <label for="eventType">Event Type *</label>
+        <select id="eventType">
+          <option value="">-- Select Event Type --</option>
+          <option value="post">Post</option>
+          <option value="comment">Comment</option>
+          <option value="reaction">Reaction</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="timestamp">Timestamp (optional)</label>
+        <input type="datetime-local" id="timestamp">
+        <div class="helper-text">Leave blank to use current time</div>
+      </div>
+
+      <div class="form-group">
+        <label for="source">Event Source</label>
+        <select id="source">
+          <option value="extension">Extension</option>
+          <option value="manual">Manual</option>
+          <option value="linkedin_api">LinkedIn API</option>
+        </select>
+        <div class="helper-text">Source of the simulated event</div>
+      </div>
+
+      <div class="form-group">
+        <label for="externalId">External ID (optional)</label>
+        <input type="text" id="externalId" placeholder="e.g., linkedin-post-12345">
+        <div class="helper-text">LinkedIn API external identifier for deduplication</div>
+      </div>
+
+      <div class="button-group">
+        <button type="button" class="btn-primary" id="simulateEvent">🚀 Simulate Event</button>
+      </div>
+    </div>
+
+    <!-- Status Display -->
+    <div id="status"></div>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>
