@@ -125,7 +125,44 @@ The response includes:
 
 ## Browser Extension Integration
 
-Your browser extension should POST events to `/api/events` whenever LinkedIn activity is detected:
+### Extension Setup
+
+The repository includes a Chrome/Edge browser extension in the `extension/` folder that provides a user-friendly interface for simulating activity events.
+
+**Loading the Extension (Development):**
+
+1. Open Chrome/Edge and navigate to `chrome://extensions/`
+2. Enable "Developer mode" (toggle in top-right)
+3. Click "Load unpacked"
+4. Select the `extension/` folder from this repository
+5. The extension icon should appear in your toolbar
+
+**Using the Extension:**
+
+1. **Right-click the extension icon** and select "Options" (or click the extension icon and select "Options")
+2. **Save your API key** (default: `demo-key-12345`)
+3. **Simulate events** by:
+   - Selecting an event type (post/comment/reaction)
+   - Optionally setting a custom timestamp (defaults to now)
+   - Choosing the event source (extension/manual/linkedin_api)
+   - Optionally providing an external ID for deduplication testing
+   - Clicking "Simulate Event"
+
+The options page provides instant feedback on success, duplicates, or errors, making it easy to test:
+- Event validation logic
+- Deduplication rules
+- Streak calculation
+- Backend error handling
+
+**Configuration:**
+
+To use the extension with a different backend (staging/production):
+- Edit `extension/background.js`
+- Update the `BACKEND_URL` constant (default: `http://localhost:3000`)
+
+### Extension Code Example
+
+For manual integration or understanding the API flow, here's the core code:
 
 ```javascript
 // Example browser extension code
