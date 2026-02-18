@@ -7,6 +7,7 @@ import RecommendationsCard from "@/components/RecommendationsCard";
 import EmptyState from "@/components/EmptyState";
 import { Spinner, SkeletonList } from "@/components/LoadingState";
 import LogActivityModal from "@/components/LogActivityModal";
+import ActivityHeatmap from "@/components/ActivityHeatmap";
 
 interface DailyActivity {
   day: string;
@@ -195,6 +196,13 @@ function DashboardContent() {
             </div>
           )}
         </div>
+
+        {/* Activity Heatmap */}
+        {!loading && !error && activity.length > 0 && (
+          <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-lg p-8 mb-6">
+            <ActivityHeatmap activity={activity} />
+          </div>
+        )}
 
         {/* Smart Recommendations */}
         {!loading && !error && (
