@@ -174,7 +174,7 @@ export default function ActivityHeatmap({ activity }: ActivityHeatmapProps) {
 
       {/* Summary text */}
       <p className="text-xs text-zinc-500 dark:text-zinc-400">
-        {activity.length} active days in the last 60 days
+        {activity.filter(item => item.count > 0).length} active days in the last 60 days
       </p>
     </div>
   );
