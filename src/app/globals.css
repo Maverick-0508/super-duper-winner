@@ -3,6 +3,11 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --accent: #0ea5e9; /* default: sky-500 */
+}
+
+[data-accent="neon"] {
+  --accent: #39ff14; /* neon green */
 }
 
 @theme inline {
