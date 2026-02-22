@@ -111,7 +111,10 @@ export function getBestDay(daily: DailyActivity[]): BestDayResult | null {
   const counts = new Array(7).fill(0);
 
   active.forEach((d) => {
-    const dow = new Date(d.day + "T12:00:00").getDay(); // noon to avoid TZ edge cases
+    // Use noon in local time so date parsing stays on the correct calendar day
+    // regardless of DST transitions. The day strings (YYYY-MM-DD) were recorded
+    // in local time by the events store, so local parsing is intentional here.
+    const dow = new Date(d.day + "T12:00:00").getDay();
     totals[dow] += d.count;
     counts[dow]++;
   });

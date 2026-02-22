@@ -10,6 +10,16 @@ interface GoalCardProps {
   daily: DailyActivity[];
 }
 
+function getStoredGoal(): number {
+  if (typeof window === "undefined") return DEFAULT_GOAL;
+  const stored = localStorage.getItem(GOAL_KEY);
+  if (stored) {
+    const parsed = parseInt(stored, 10);
+    if (!isNaN(parsed) && parsed > 0) return parsed;
+  }
+  return DEFAULT_GOAL;
+}
+
 function ProgressRing({
   progress,
   size = 80,
@@ -57,25 +67,9 @@ function ProgressRing({
 }
 
 export default function GoalCard({ daily }: GoalCardProps) {
-  const [goal, setGoal] = useState<number>(() => {
-    if (typeof window === "undefined") return DEFAULT_GOAL;
-    const stored = localStorage.getItem(GOAL_KEY);
-    if (stored) {
-      const parsed = parseInt(stored, 10);
-      if (!isNaN(parsed) && parsed > 0) return parsed;
-    }
-    return DEFAULT_GOAL;
-  });
+  const [goal, setGoal] = useState<number>(getStoredGoal);
   const [editing, setEditing] = useState(false);
-  const [inputVal, setInputVal] = useState<string>(() => {
-    if (typeof window === "undefined") return String(DEFAULT_GOAL);
-    const stored = localStorage.getItem(GOAL_KEY);
-    if (stored) {
-      const parsed = parseInt(stored, 10);
-      if (!isNaN(parsed) && parsed > 0) return String(parsed);
-    }
-    return String(DEFAULT_GOAL);
-  });
+  const [inputVal, setInputVal] = useState<string>(() => String(getStoredGoal()));
 
   // No need for a separate useEffect to read localStorage - handled in lazy initializers
 
