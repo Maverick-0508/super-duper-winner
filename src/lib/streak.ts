@@ -3,6 +3,41 @@
  */
 
 /**
+ * Calculate the longest ever streak from a map of daily activity counts.
+ *
+ * @param dailyCounts - Map from YYYY-MM-DD to activity count
+ * @returns The longest consecutive-day streak ever recorded
+ */
+export function calculateLongestStreak(
+  dailyCounts: Record<string, number>
+): number {
+  const activeDays = Object.keys(dailyCounts)
+    .filter((day) => dailyCounts[day] > 0)
+    .sort();
+
+  if (activeDays.length === 0) return 0;
+
+  let longest = 1;
+  let current = 1;
+
+  for (let i = 1; i < activeDays.length; i++) {
+    const prev = new Date(activeDays[i - 1]);
+    const curr = new Date(activeDays[i]);
+    const diffDays =
+      (curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24);
+
+    if (diffDays === 1) {
+      current++;
+      if (current > longest) longest = current;
+    } else {
+      current = 1;
+    }
+  }
+
+  return longest;
+}
+
+/**
  * Calculate the current streak from a map of daily activity counts.
  * 
  * The current streak represents a continuous run of days with activity that:

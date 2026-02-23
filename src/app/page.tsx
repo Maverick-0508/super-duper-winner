@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import OnboardingGuide from "@/components/OnboardingGuide";
 import RecommendationsCard from "@/components/RecommendationsCard";
@@ -8,25 +8,60 @@ import EmptyState from "@/components/EmptyState";
 import { Spinner, SkeletonList } from "@/components/LoadingState";
 import LogActivityModal from "@/components/LogActivityModal";
 import ActivityHeatmap from "@/components/ActivityHeatmap";
+import WeeklySummaryCards from "@/components/WeeklySummaryCards";
+import ContentMixCard from "@/components/ContentMixCard";
+import StreakCard from "@/components/StreakCard";
+import GoalCard from "@/components/GoalCard";
+import DailyChecklist from "@/components/DailyChecklist";
+import MilestoneBadges from "@/components/MilestoneBadges";
+import { getThisWeekTotal } from "@/lib/analytics";
 
 interface DailyActivity {
   day: string;
   count: number;
 }
 
+interface TypeCounts {
+  post: number;
+  comment: number;
+  reaction: number;
+}
+
 interface ActivityResponse {
   daily: DailyActivity[];
   currentStreak: number;
+  longestStreak: number;
+  periodTypeCounts: TypeCounts;
+  todayTypeCounts: TypeCounts;
 }
 
 function DashboardContent() {
   const [activity, setActivity] = useState<DailyActivity[]>([]);
   const [currentStreak, setCurrentStreak] = useState<number>(0);
+  const [longestStreak, setLongestStreak] = useState<number>(0);
+  const [periodTypeCounts, setPeriodTypeCounts] = useState<TypeCounts>({ post: 0, comment: 0, reaction: 0 });
+  const [todayTypeCounts, setTodayTypeCounts] = useState<TypeCounts>({ post: 0, comment: 0, reaction: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [prefilledType, setPrefilledType] = useState<"post" | "comment" | "reaction" | "">("");
   const [refreshKey, setRefreshKey] = useState(0);
+  const [accentNeon, setAccentNeon] = useState(false);
+  const [weeklyGoal, setWeeklyGoal] = useState(5);
+
+  // Sync accent attribute to <html> element
+  useEffect(() => {
+    document.documentElement.setAttribute("data-accent", accentNeon ? "neon" : "default");
+  }, [accentNeon]);
+
+  // Read weeklyGoal from localStorage so DailyChecklist nudge stays in sync
+  useEffect(() => {
+    const stored = localStorage.getItem("linkedin_tracker_weekly_goal");
+    if (stored) {
+      const parsed = parseInt(stored, 10);
+      if (!isNaN(parsed) && parsed > 0) setWeeklyGoal(parsed);
+    }
+  }, []);
 
   useEffect(() => {
     async function fetchActivity() {
@@ -45,9 +80,7 @@ function DashboardContent() {
         const toStr = toDate.toISOString().split("T")[0];
 
         const response = await fetch(
-          `/api/activity/daily?apiKey=${encodeURIComponent(
-            apiKey
-          )}&from=${fromStr}&to=${toStr}`
+          `/api/activity/daily?apiKey=${encodeURIComponent(apiKey)}&from=${fromStr}&to=${toStr}`
         );
 
         if (!response.ok) {
@@ -58,6 +91,9 @@ function DashboardContent() {
         const data: ActivityResponse = await response.json();
         setActivity(data.daily);
         setCurrentStreak(data.currentStreak);
+        setLongestStreak(data.longestStreak ?? 0);
+        setPeriodTypeCounts(data.periodTypeCounts ?? { post: 0, comment: 0, reaction: 0 });
+        setTodayTypeCounts(data.todayTypeCounts ?? { post: 0, comment: 0, reaction: 0 });
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unknown error");
       } finally {
@@ -68,9 +104,15 @@ function DashboardContent() {
     fetchActivity();
   }, [refreshKey]);
 
-  // Calculate stats for recommendations
+  // Calculate stats
   const totalActivities = activity.reduce((sum, item) => sum + item.count, 0);
   const lastActivityDate = activity.length > 0 ? activity[activity.length - 1].day : undefined;
+  const thisWeekTotal = getThisWeekTotal(activity);
+
+  const openModal = useCallback((type: "post" | "comment" | "reaction" | "" = "") => {
+    setPrefilledType(type);
+    setIsModalOpen(true);
+  }, []);
 
   const handleRecommendationAction = (actionType: string) => {
     const typeMap: { [key: string]: "post" | "comment" | "reaction" } = {
@@ -78,10 +120,8 @@ function DashboardContent() {
       "log-comment": "comment",
       "log-reaction": "reaction",
     };
-
     if (actionType in typeMap) {
-      setPrefilledType(typeMap[actionType]);
-      setIsModalOpen(true);
+      openModal(typeMap[actionType]);
     }
   };
 
@@ -96,12 +136,7 @@ function DashboardContent() {
       const response = await fetch("/api/events", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          apiKey,
-          type,
-          timestamp,
-          source: "linkedin",
-        }),
+        body: JSON.stringify({ apiKey, type, timestamp, source: "linkedin" }),
       });
 
       if (!response.ok) {
@@ -109,7 +144,6 @@ function DashboardContent() {
         throw new Error(errorData.error || "Failed to log activity");
       }
 
-      // Refresh activity data
       setRefreshKey((prev) => prev + 1);
       alert("Activity logged successfully!");
     } catch (err) {
@@ -123,29 +157,31 @@ function DashboardContent() {
         {/* Onboarding Guide */}
         <OnboardingGuide />
 
-        {/* Header with Quick Actions */}
-        <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-lg p-8 mb-6">
-          <div className="flex justify-between items-start mb-2">
-            <h1 className="text-4xl font-bold text-zinc-900 dark:text-zinc-50">
+        {/* Header */}
+        <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-lg p-6 sm:p-8 mb-6">
+          <div className="flex flex-wrap justify-between items-start gap-3 mb-4">
+            <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-zinc-50">
               LinkedIn Activity Dashboard
             </h1>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setAccentNeon((v) => !v)}
+                className="px-3 py-2 text-sm rounded-md border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
+                title={accentNeon ? "Switch to default theme" : "Switch to neon accent"}
+              >
+                {accentNeon ? "🎨 Default" : "⚡ Neon"}
+              </button>
               <a
                 href="https://www.linkedin.com"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium transition-colors text-sm"
-                title="Open LinkedIn in a new tab"
               >
                 Open LinkedIn →
               </a>
               <button
-                onClick={() => {
-                  setPrefilledType("");
-                  setIsModalOpen(true);
-                }}
+                onClick={() => openModal("")}
                 className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md font-medium transition-colors text-sm"
-                title="Log a new activity"
               >
                 + Log Activity
               </button>
@@ -160,42 +196,80 @@ function DashboardContent() {
 
           {/* Stats Summary */}
           {!loading && !error && (
-            <div className="grid grid-cols-4 gap-4 mb-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
               <div className="bg-zinc-50 dark:bg-zinc-700 rounded-lg p-4 text-center">
-                <div className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
-                  {totalActivities}
-                </div>
-                <div className="text-sm text-zinc-600 dark:text-zinc-400">
-                  Total Activities
-                </div>
+                <div className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">{totalActivities}</div>
+                <div className="text-sm text-zinc-600 dark:text-zinc-400">Total Activities</div>
               </div>
               <div className="bg-zinc-50 dark:bg-zinc-700 rounded-lg p-4 text-center">
-                <div className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
-                  {activity.length}
-                </div>
-                <div className="text-sm text-zinc-600 dark:text-zinc-400">
-                  Active Days
-                </div>
+                <div className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">{activity.length}</div>
+                <div className="text-sm text-zinc-600 dark:text-zinc-400">Active Days</div>
               </div>
               <div className="bg-zinc-50 dark:bg-zinc-700 rounded-lg p-4 text-center">
                 <div className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
                   {activity.length > 0 ? (totalActivities / activity.length).toFixed(1) : 0}
                 </div>
-                <div className="text-sm text-zinc-600 dark:text-zinc-400">
-                  Avg per Day
-                </div>
+                <div className="text-sm text-zinc-600 dark:text-zinc-400">Avg per Day</div>
               </div>
               <div className="bg-zinc-50 dark:bg-zinc-700 rounded-lg p-4 text-center">
-                <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">
-                  {currentStreak}
-                </div>
-                <div className="text-sm text-zinc-600 dark:text-zinc-400">
-                  Current Streak 🔥
-                </div>
+                <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">{currentStreak}</div>
+                <div className="text-sm text-zinc-600 dark:text-zinc-400">Current Streak 🔥</div>
               </div>
             </div>
           )}
+
+          {/* Weekly / Monthly summary */}
+          {!loading && !error && activity.length > 0 && (
+            <WeeklySummaryCards daily={activity} />
+          )}
         </div>
+
+        {/* Analytics: Content Mix + Streak */}
+        {!loading && !error && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-lg p-6">
+              <ContentMixCard typeCounts={periodTypeCounts} />
+            </div>
+            <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-lg p-6">
+              <StreakCard
+                currentStreak={currentStreak}
+                longestStreak={longestStreak}
+                daily={activity}
+                onRecoverStreak={() => openModal("")}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Habits: Goal + Daily Checklist */}
+        {!loading && !error && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-lg p-6">
+              <GoalCard daily={activity} />
+            </div>
+            <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-lg p-6">
+              <DailyChecklist
+                todayTypeCounts={todayTypeCounts}
+                currentStreak={currentStreak}
+                weeklyGoal={weeklyGoal}
+                thisWeekTotal={thisWeekTotal}
+                onLogActivity={(type) => openModal(type)}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Milestone Badges */}
+        {!loading && !error && (
+          <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-lg p-6 mb-6">
+            <MilestoneBadges
+              currentStreak={currentStreak}
+              longestStreak={longestStreak}
+              totalActivities={totalActivities}
+              activeDays={activity.length}
+            />
+          </div>
+        )}
 
         {/* Activity Heatmap */}
         {!loading && !error && activity.length > 0 && (
@@ -240,13 +314,7 @@ function DashboardContent() {
           {!loading && !error && (
             <div>
               {activity.length === 0 ? (
-                <EmptyState
-                  type="activity"
-                  onAction={() => {
-                    setPrefilledType("");
-                    setIsModalOpen(true);
-                  }}
-                />
+                <EmptyState type="activity" onAction={() => openModal("")} />
               ) : (
                 <div className="space-y-2">
                   {activity.map((item) => (
@@ -255,9 +323,7 @@ function DashboardContent() {
                       className="flex justify-between items-center p-3 bg-zinc-50 dark:bg-zinc-700 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-600 transition-colors"
                       title={`${item.count} ${item.count === 1 ? "activity" : "activities"} on ${item.day}`}
                     >
-                      <span className="font-medium text-zinc-900 dark:text-zinc-50">
-                        {item.day}
-                      </span>
+                      <span className="font-medium text-zinc-900 dark:text-zinc-50">{item.day}</span>
                       <span className="text-zinc-600 dark:text-zinc-300">
                         {item.count} {item.count === 1 ? "event" : "events"}
                       </span>
@@ -270,7 +336,7 @@ function DashboardContent() {
         </div>
       </main>
 
-      {/* Log Activity Modal - key prop ensures fresh state when opening with different prefilled types */}
+      {/* Log Activity Modal */}
       <LogActivityModal
         key={isModalOpen ? `modal-${prefilledType}` : "modal-closed"}
         isOpen={isModalOpen}

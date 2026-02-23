@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getEvents, EventType } from "@/lib/eventsStore";
 import { getUserIdFromApiKey } from "@/lib/authApiKey";
-import { calculateCurrentStreak } from "@/lib/streak";
+import { calculateCurrentStreak, calculateLongestStreak } from "@/lib/streak";
 
 interface DailyActivity {
   day: string; // YYYY-MM-DD
@@ -86,8 +86,37 @@ export async function GET(request: NextRequest) {
   const dailyCountsRecord: Record<string, number> = Object.fromEntries(dailyCountsMap);
   const currentStreak = calculateCurrentStreak(dailyCountsRecord);
 
+  // Calculate longest streak (all-time, regardless of date range)
+  const allEvents = getEvents(userId);
+  const allDailyCounts: Record<string, number> = {};
+  allEvents.forEach((event) => {
+    const day = new Date(event.timestamp).toISOString().split("T")[0];
+    allDailyCounts[day] = (allDailyCounts[day] || 0) + 1;
+  });
+  const longestStreak = calculateLongestStreak(allDailyCounts);
+
+  // Per-type counts for the queried period
+  const periodTypeCounts = { post: 0, comment: 0, reaction: 0 };
+  events.forEach((event) => {
+    periodTypeCounts[event.type as "post" | "comment" | "reaction"]++;
+  });
+
+  // Per-type counts for today
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const todayEnd = new Date();
+  todayEnd.setHours(23, 59, 59, 999);
+  const todayEvents = getEvents(userId, todayStart, todayEnd);
+  const todayTypeCounts = { post: 0, comment: 0, reaction: 0 };
+  todayEvents.forEach((event) => {
+    todayTypeCounts[event.type as "post" | "comment" | "reaction"]++;
+  });
+
   return NextResponse.json({
     daily: dailyActivity,
     currentStreak,
+    longestStreak,
+    periodTypeCounts,
+    todayTypeCounts,
   });
 }
