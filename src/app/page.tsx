@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import OnboardingGuide from "@/components/OnboardingGuide";
 import RecommendationsCard from "@/components/RecommendationsCard";
@@ -14,7 +14,11 @@ import StreakCard from "@/components/StreakCard";
 import GoalCard from "@/components/GoalCard";
 import DailyChecklist from "@/components/DailyChecklist";
 import MilestoneBadges from "@/components/MilestoneBadges";
+import QualityScoreCard from "@/components/QualityScoreCard";
+import PersonalBestAlert from "@/components/PersonalBestAlert";
 import { getThisWeekTotal } from "@/lib/analytics";
+import { computeQualityScore } from "@/lib/scoring";
+import { checkAndUpdatePersonalBests, getPersonalBests } from "@/lib/baselines";
 
 interface DailyActivity {
   day: string;
@@ -33,6 +37,7 @@ interface ActivityResponse {
   longestStreak: number;
   periodTypeCounts: TypeCounts;
   todayTypeCounts: TypeCounts;
+  weeklyTypeCounts?: TypeCounts;
 }
 
 function DashboardContent() {
@@ -41,6 +46,7 @@ function DashboardContent() {
   const [longestStreak, setLongestStreak] = useState<number>(0);
   const [periodTypeCounts, setPeriodTypeCounts] = useState<TypeCounts>({ post: 0, comment: 0, reaction: 0 });
   const [todayTypeCounts, setTodayTypeCounts] = useState<TypeCounts>({ post: 0, comment: 0, reaction: 0 });
+  const [weeklyTypeCounts, setWeeklyTypeCounts] = useState<TypeCounts>({ post: 0, comment: 0, reaction: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -48,6 +54,15 @@ function DashboardContent() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [accentNeon, setAccentNeon] = useState(false);
   const [weeklyGoal, setWeeklyGoal] = useState(5);
+
+  // Personal best alert state
+  const [pbAlert, setPbAlert] = useState<{
+    newBestTotal: boolean;
+    newBestScore: boolean;
+    weeklyTotal: number;
+    weeklyScore: number;
+  } | null>(null);
+  const pbCheckedRef = useRef(false);
 
   // Sync accent attribute to <html> element
   useEffect(() => {
@@ -94,6 +109,24 @@ function DashboardContent() {
         setLongestStreak(data.longestStreak ?? 0);
         setPeriodTypeCounts(data.periodTypeCounts ?? { post: 0, comment: 0, reaction: 0 });
         setTodayTypeCounts(data.todayTypeCounts ?? { post: 0, comment: 0, reaction: 0 });
+        const wCounts = data.weeklyTypeCounts ?? { post: 0, comment: 0, reaction: 0 };
+        setWeeklyTypeCounts(wCounts);
+
+        // Personal-best check (run once per session after first load)
+        if (!pbCheckedRef.current) {
+          pbCheckedRef.current = true;
+          const wTotal = getThisWeekTotal(data.daily);
+          const wScore = computeQualityScore(wCounts);
+          const result = checkAndUpdatePersonalBests(wTotal, wScore);
+          if (result.newBestTotal || result.newBestScore) {
+            setPbAlert({
+              newBestTotal: result.newBestTotal,
+              newBestScore: result.newBestScore,
+              weeklyTotal: wTotal,
+              weeklyScore: wScore,
+            });
+          }
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unknown error");
       } finally {
@@ -108,6 +141,7 @@ function DashboardContent() {
   const totalActivities = activity.reduce((sum, item) => sum + item.count, 0);
   const lastActivityDate = activity.length > 0 ? activity[activity.length - 1].day : undefined;
   const thisWeekTotal = getThisWeekTotal(activity);
+  const personalBests = getPersonalBests();
 
   const openModal = useCallback((type: "post" | "comment" | "reaction" | "" = "") => {
     setPrefilledType(type);
@@ -224,20 +258,43 @@ function DashboardContent() {
           )}
         </div>
 
-        {/* Analytics: Content Mix + Streak */}
+        {/* Personal Best Alert */}
+        {pbAlert && (
+          <PersonalBestAlert
+            newBestTotal={pbAlert.newBestTotal}
+            newBestScore={pbAlert.newBestScore}
+            weeklyTotal={pbAlert.weeklyTotal}
+            weeklyScore={pbAlert.weeklyScore}
+            onDismiss={() => setPbAlert(null)}
+          />
+        )}
+
+        {/* Analytics: Quality Score + Content Mix + Streak */}
         {!loading && !error && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-lg p-6">
-              <ContentMixCard typeCounts={periodTypeCounts} />
-            </div>
-            <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-lg p-6">
-              <StreakCard
-                currentStreak={currentStreak}
-                longestStreak={longestStreak}
-                daily={activity}
-                onRecoverStreak={() => openModal("")}
+              <QualityScoreCard
+                typeCounts={weeklyTypeCounts}
+                label="This Week"
+                personalBest={personalBests.weeklyScore}
+                isNewBest={pbAlert?.newBestScore ?? false}
               />
             </div>
+            <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-lg p-6">
+              <ContentMixCard typeCounts={periodTypeCounts} />
+            </div>
+          </div>
+        )}
+
+        {/* Streak */}
+        {!loading && !error && (
+          <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-lg p-6 mb-6">
+            <StreakCard
+              currentStreak={currentStreak}
+              longestStreak={longestStreak}
+              daily={activity}
+              onRecoverStreak={() => openModal("")}
+            />
           </div>
         )}
 
