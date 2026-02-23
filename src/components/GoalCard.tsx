@@ -6,6 +6,30 @@ import { getThisWeekTotal, type DailyActivity } from "@/lib/analytics";
 const GOAL_KEY = "linkedin_tracker_weekly_goal";
 const DEFAULT_GOAL = 5;
 
+/** Pre-defined goal templates users can apply with one click. */
+export const GOAL_TEMPLATES = [
+  {
+    name: "Consistent Posting",
+    weeklyGoal: 5,
+    description: "Post at least 5 times per week to build audience trust.",
+  },
+  {
+    name: "Engagement Growth",
+    weeklyGoal: 15,
+    description: "Mix posts, comments and reactions to grow your reach.",
+  },
+  {
+    name: "Thought Leader",
+    weeklyGoal: 3,
+    description: "Focus on 3 high-quality, in-depth posts per week.",
+  },
+  {
+    name: "Community Builder",
+    weeklyGoal: 10,
+    description: "Engage with 10 posts via comments and reactions each week.",
+  },
+] as const;
+
 interface GoalCardProps {
   daily: DailyActivity[];
 }
@@ -70,17 +94,26 @@ export default function GoalCard({ daily }: GoalCardProps) {
   const [goal, setGoal] = useState<number>(getStoredGoal);
   const [editing, setEditing] = useState(false);
   const [inputVal, setInputVal] = useState<string>(() => String(getStoredGoal()));
+  const [showTemplates, setShowTemplates] = useState(false);
 
   // No need for a separate useEffect to read localStorage - handled in lazy initializers
+
+  const applyGoal = useCallback((value: number) => {
+    setGoal(value);
+    setInputVal(String(value));
+    localStorage.setItem(GOAL_KEY, String(value));
+    setEditing(false);
+    setShowTemplates(false);
+  }, []);
 
   const saveGoal = useCallback(() => {
     const parsed = parseInt(inputVal, 10);
     if (!isNaN(parsed) && parsed > 0) {
-      setGoal(parsed);
-      localStorage.setItem(GOAL_KEY, String(parsed));
+      applyGoal(parsed);
+    } else {
+      setEditing(false);
     }
-    setEditing(false);
-  }, [inputVal]);
+  }, [inputVal, applyGoal]);
 
   const thisWeek = getThisWeekTotal(daily);
   const progress = goal > 0 ? (thisWeek / goal) * 100 : 0;
@@ -92,37 +125,74 @@ export default function GoalCard({ daily }: GoalCardProps) {
         <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-50">
           🎯 Weekly Goal
         </h3>
-        {!editing ? (
+        <div className="flex items-center gap-2">
           <button
-            onClick={() => setEditing(true)}
+            onClick={() => { setShowTemplates((v) => !v); setEditing(false); }}
             className="text-xs px-2 py-1 text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 border border-zinc-200 dark:border-zinc-600 rounded transition-colors"
           >
-            Edit goal
+            📋 Templates
           </button>
-        ) : (
-          <div className="flex items-center gap-2">
-            <input
-              type="number"
-              min={1}
-              max={100}
-              value={inputVal}
-              onChange={(e) => setInputVal(e.target.value)}
-              className="w-16 px-2 py-1 text-sm border border-zinc-300 dark:border-zinc-600 rounded bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50"
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === "Enter") saveGoal();
-                if (e.key === "Escape") setEditing(false);
-              }}
-            />
+          {!editing ? (
             <button
-              onClick={saveGoal}
-              className="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded"
+              onClick={() => { setEditing(true); setShowTemplates(false); }}
+              className="text-xs px-2 py-1 text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 border border-zinc-200 dark:border-zinc-600 rounded transition-colors"
             >
-              Save
+              Edit goal
             </button>
-          </div>
-        )}
+          ) : (
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min={1}
+                max={100}
+                value={inputVal}
+                onChange={(e) => setInputVal(e.target.value)}
+                className="w-16 px-2 py-1 text-sm border border-zinc-300 dark:border-zinc-600 rounded bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-50"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") saveGoal();
+                  if (e.key === "Escape") setEditing(false);
+                }}
+              />
+              <button
+                onClick={saveGoal}
+                className="text-xs px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded"
+              >
+                Save
+              </button>
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Goal Templates */}
+      {showTemplates && (
+        <div className="mb-4 p-3 bg-zinc-50 dark:bg-zinc-700/50 rounded-lg border border-zinc-200 dark:border-zinc-600">
+          <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-2 uppercase tracking-wide">
+            Goal Templates
+          </p>
+          <div className="space-y-2">
+            {GOAL_TEMPLATES.map((t) => (
+              <button
+                key={t.name}
+                onClick={() => applyGoal(t.weeklyGoal)}
+                className={`w-full text-left px-3 py-2 rounded-md border transition-colors text-sm ${
+                  goal === t.weeklyGoal
+                    ? "border-[var(--accent,#0ea5e9)] bg-sky-50 dark:bg-sky-900/20 text-zinc-900 dark:text-zinc-50"
+                    : "border-zinc-200 dark:border-zinc-600 hover:border-zinc-300 dark:hover:border-zinc-500 text-zinc-700 dark:text-zinc-300"
+                }`}
+              >
+                <span className="font-medium">{t.name}</span>
+                <span className="ml-2 text-xs text-zinc-400 dark:text-zinc-500">
+                  ({t.weeklyGoal}/wk)
+                </span>
+                <br />
+                <span className="text-xs text-zinc-500 dark:text-zinc-400">{t.description}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="flex items-center gap-4">
         <div className="relative flex-shrink-0">

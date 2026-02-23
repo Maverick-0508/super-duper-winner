@@ -112,11 +112,28 @@ export async function GET(request: NextRequest) {
     todayTypeCounts[event.type as "post" | "comment" | "reaction"]++;
   });
 
+  // Per-type counts for the current calendar week (Mon–Sun)
+  const now = new Date();
+  const dow = now.getDay(); // 0=Sun … 6=Sat
+  const mondayOffset = dow === 0 ? -6 : 1 - dow;
+  const weekStart = new Date(now);
+  weekStart.setDate(now.getDate() + mondayOffset);
+  weekStart.setHours(0, 0, 0, 0);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 6);
+  weekEnd.setHours(23, 59, 59, 999);
+  const weekEvents = getEvents(userId, weekStart, weekEnd);
+  const weeklyTypeCounts = { post: 0, comment: 0, reaction: 0 };
+  weekEvents.forEach((event) => {
+    weeklyTypeCounts[event.type as "post" | "comment" | "reaction"]++;
+  });
+
   return NextResponse.json({
     daily: dailyActivity,
     currentStreak,
     longestStreak,
     periodTypeCounts,
     todayTypeCounts,
+    weeklyTypeCounts,
   });
 }
