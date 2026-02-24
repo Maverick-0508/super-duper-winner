@@ -16,9 +16,15 @@ import DailyChecklist from "@/components/DailyChecklist";
 import MilestoneBadges from "@/components/MilestoneBadges";
 import QualityScoreCard from "@/components/QualityScoreCard";
 import PersonalBestAlert from "@/components/PersonalBestAlert";
+import RoleSelector from "@/components/RoleSelector";
+import TeamDashboard from "@/components/TeamDashboard";
+import AuditLog from "@/components/AuditLog";
+import PrivacySettingsPanel from "@/components/PrivacySettings";
 import { getThisWeekTotal } from "@/lib/analytics";
 import { computeQualityScore } from "@/lib/scoring";
 import { checkAndUpdatePersonalBests, getPersonalBests } from "@/lib/baselines";
+import { getRole, canViewTeamAnalytics, canViewPrivacyControls, canViewAuditLog, type Role } from "@/lib/roles";
+import { getPrivacySettings, type PrivacySettings } from "@/lib/privacy";
 
 interface DailyActivity {
   day: string;
@@ -40,6 +46,8 @@ interface ActivityResponse {
   weeklyTypeCounts?: TypeCounts;
 }
 
+type ActiveTab = "personal" | "team" | "privacy" | "audit";
+
 function DashboardContent() {
   const [activity, setActivity] = useState<DailyActivity[]>([]);
   const [currentStreak, setCurrentStreak] = useState<number>(0);
@@ -54,6 +62,9 @@ function DashboardContent() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [accentNeon, setAccentNeon] = useState(false);
   const [weeklyGoal, setWeeklyGoal] = useState(5);
+  const [activeTab, setActiveTab] = useState<ActiveTab>("personal");
+  const [role, setRoleState] = useState<Role>(() => getRole());
+  const [privacy, setPrivacy] = useState<PrivacySettings>(() => getPrivacySettings());
 
   // Personal best alert state
   const [pbAlert, setPbAlert] = useState<{
@@ -77,6 +88,9 @@ function DashboardContent() {
       if (!isNaN(parsed) && parsed > 0) setWeeklyGoal(parsed);
     }
   }, []);
+
+  // Load role and privacy settings from localStorage
+  // Note: lazy initializers in useState handle SSR-safe reads via `getRole()` / `getPrivacySettings()`
 
   useEffect(() => {
     async function fetchActivity() {
@@ -197,7 +211,8 @@ function DashboardContent() {
             <h1 className="text-3xl sm:text-4xl font-bold text-zinc-900 dark:text-zinc-50">
               LinkedIn Activity Dashboard
             </h1>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 items-center">
+              <RoleSelector onRoleChange={(r) => setRoleState(r)} />
               <button
                 onClick={() => setAccentNeon((v) => !v)}
                 className="px-3 py-2 text-sm rounded-md border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
@@ -258,139 +273,237 @@ function DashboardContent() {
           )}
         </div>
 
-        {/* Personal Best Alert */}
-        {pbAlert && (
-          <PersonalBestAlert
-            newBestTotal={pbAlert.newBestTotal}
-            newBestScore={pbAlert.newBestScore}
-            weeklyTotal={pbAlert.weeklyTotal}
-            weeklyScore={pbAlert.weeklyScore}
-            onDismiss={() => setPbAlert(null)}
-          />
-        )}
-
-        {/* Analytics: Quality Score + Content Mix + Streak */}
-        {!loading && !error && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-lg p-6">
-              <QualityScoreCard
-                typeCounts={weeklyTypeCounts}
-                label="This Week"
-                personalBest={personalBests.weeklyScore}
-                isNewBest={pbAlert?.newBestScore ?? false}
-              />
-            </div>
-            <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-lg p-6">
-              <ContentMixCard typeCounts={periodTypeCounts} />
-            </div>
+        {/* Tab Navigation */}
+        <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-lg mb-6 overflow-hidden">
+          <div className="flex border-b border-zinc-200 dark:border-zinc-700 overflow-x-auto">
+            <button
+              onClick={() => setActiveTab("personal")}
+              className={`px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap ${
+                activeTab === "personal"
+                  ? "border-b-2 border-[var(--accent,#0ea5e9)] text-[var(--accent,#0ea5e9)]"
+                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50"
+              }`}
+            >
+              📊 Personal
+            </button>
+            {canViewTeamAnalytics(role) && (
+              <button
+                onClick={() => setActiveTab("team")}
+                className={`px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap ${
+                  activeTab === "team"
+                    ? "border-b-2 border-[var(--accent,#0ea5e9)] text-[var(--accent,#0ea5e9)]"
+                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50"
+                }`}
+              >
+                👥 Team
+              </button>
+            )}
+            {canViewPrivacyControls(role) && (
+              <button
+                onClick={() => setActiveTab("privacy")}
+                className={`px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap ${
+                  activeTab === "privacy"
+                    ? "border-b-2 border-[var(--accent,#0ea5e9)] text-[var(--accent,#0ea5e9)]"
+                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50"
+                }`}
+              >
+                🔒 Privacy
+              </button>
+            )}
+            {canViewAuditLog(role) && (
+              <button
+                onClick={() => setActiveTab("audit")}
+                className={`px-4 py-3 text-sm font-medium transition-colors whitespace-nowrap ${
+                  activeTab === "audit"
+                    ? "border-b-2 border-[var(--accent,#0ea5e9)] text-[var(--accent,#0ea5e9)]"
+                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-50"
+                }`}
+              >
+                📋 Audit Log
+              </button>
+            )}
           </div>
-        )}
 
-        {/* Streak */}
-        {!loading && !error && (
-          <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-lg p-6 mb-6">
-            <StreakCard
-              currentStreak={currentStreak}
-              longestStreak={longestStreak}
-              daily={activity}
-              onRecoverStreak={() => openModal("")}
-            />
-          </div>
-        )}
-
-        {/* Habits: Goal + Daily Checklist */}
-        {!loading && !error && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-lg p-6">
-              <GoalCard daily={activity} />
-            </div>
-            <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-lg p-6">
-              <DailyChecklist
-                todayTypeCounts={todayTypeCounts}
-                currentStreak={currentStreak}
-                weeklyGoal={weeklyGoal}
-                thisWeekTotal={thisWeekTotal}
-                onLogActivity={(type) => openModal(type)}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Milestone Badges */}
-        {!loading && !error && (
-          <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-lg p-6 mb-6">
-            <MilestoneBadges
-              currentStreak={currentStreak}
-              longestStreak={longestStreak}
-              totalActivities={totalActivities}
-              activeDays={activity.length}
-            />
-          </div>
-        )}
-
-        {/* Activity Heatmap */}
-        {!loading && !error && activity.length > 0 && (
-          <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-lg p-8 mb-6">
-            <ActivityHeatmap activity={activity} />
-          </div>
-        )}
-
-        {/* Smart Recommendations */}
-        {!loading && !error && (
-          <RecommendationsCard
-            activityCount={totalActivities}
-            lastActivityDate={lastActivityDate}
-            onAction={handleRecommendationAction}
-          />
-        )}
-
-        {/* Activity List */}
-        <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-lg p-8">
-          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50 mb-4">
-            Daily Activity (Last 60 Days)
-          </h2>
-
-          {loading && (
-            <div>
-              <div className="text-center py-6 mb-4">
-                <Spinner />
-                <p className="mt-4 text-zinc-600 dark:text-zinc-400">Loading activity...</p>
-              </div>
-              <SkeletonList count={5} />
+          {/* Team Tab */}
+          {activeTab === "team" && canViewTeamAnalytics(role) && (
+            <div className="p-6">
+              <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 mb-4">
+                Team Dashboard
+              </h2>
+              <TeamDashboard privacy={privacy} />
             </div>
           )}
 
-          {error && (
-            <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
-              <p className="text-red-800 dark:text-red-200">
-                <strong>Error:</strong> {error}
+          {/* Privacy Tab */}
+          {activeTab === "privacy" && canViewPrivacyControls(role) && (
+            <div className="p-6">
+              <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 mb-1">
+                Privacy Settings
+              </h2>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4">
+                Control how your data is used and displayed across the platform.
               </p>
+              <PrivacySettingsPanel
+                settings={privacy}
+                onSettingsChange={setPrivacy}
+              />
             </div>
           )}
 
-          {!loading && !error && (
-            <div>
-              {activity.length === 0 ? (
-                <EmptyState type="activity" onAction={() => openModal("")} />
-              ) : (
-                <div className="space-y-2">
-                  {activity.map((item) => (
-                    <div
-                      key={item.day}
-                      className="flex justify-between items-center p-3 bg-zinc-50 dark:bg-zinc-700 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-600 transition-colors"
-                      title={`${item.count} ${item.count === 1 ? "activity" : "activities"} on ${item.day}`}
-                    >
-                      <span className="font-medium text-zinc-900 dark:text-zinc-50">{item.day}</span>
-                      <span className="text-zinc-600 dark:text-zinc-300">
-                        {item.count} {item.count === 1 ? "event" : "events"}
-                      </span>
+          {/* Audit Log Tab */}
+          {activeTab === "audit" && canViewAuditLog(role) && (
+            <div className="p-6">
+              <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 mb-1">
+                Audit Log
+              </h2>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4">
+                Record of notable actions taken in this session.
+              </p>
+              <AuditLog />
+            </div>
+          )}
+
+          {/* Personal Dashboard Content is rendered below the tab bar */}
+        </div>
+
+        {/* Personal Dashboard Content (shown only on personal tab) */}
+        {activeTab === "personal" && (
+          <>
+            {/* Personal Best Alert */}
+            {pbAlert && (
+              <PersonalBestAlert
+                newBestTotal={pbAlert.newBestTotal}
+                newBestScore={pbAlert.newBestScore}
+                weeklyTotal={pbAlert.weeklyTotal}
+                weeklyScore={pbAlert.weeklyScore}
+                onDismiss={() => setPbAlert(null)}
+              />
+            )}
+
+            {/* Analytics: Quality Score + Content Mix + Streak */}
+            {!loading && !error && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-lg p-6">
+                  <QualityScoreCard
+                    typeCounts={weeklyTypeCounts}
+                    label="This Week"
+                    personalBest={personalBests.weeklyScore}
+                    isNewBest={pbAlert?.newBestScore ?? false}
+                  />
+                </div>
+                <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-lg p-6">
+                  <ContentMixCard typeCounts={periodTypeCounts} />
+                </div>
+              </div>
+            )}
+
+            {/* Streak */}
+            {!loading && !error && (
+              <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-lg p-6 mb-6">
+                <StreakCard
+                  currentStreak={currentStreak}
+                  longestStreak={longestStreak}
+                  daily={activity}
+                  onRecoverStreak={() => openModal("")}
+                />
+              </div>
+            )}
+
+            {/* Habits: Goal + Daily Checklist */}
+            {!loading && !error && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-lg p-6">
+                  <GoalCard daily={activity} />
+                </div>
+                <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-lg p-6">
+                  <DailyChecklist
+                    todayTypeCounts={todayTypeCounts}
+                    currentStreak={currentStreak}
+                    weeklyGoal={weeklyGoal}
+                    thisWeekTotal={thisWeekTotal}
+                    onLogActivity={(type) => openModal(type)}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Milestone Badges */}
+            {!loading && !error && (
+              <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-lg p-6 mb-6">
+                <MilestoneBadges
+                  currentStreak={currentStreak}
+                  longestStreak={longestStreak}
+                  totalActivities={totalActivities}
+                  activeDays={activity.length}
+                />
+              </div>
+            )}
+
+            {/* Activity Heatmap */}
+            {!loading && !error && activity.length > 0 && (
+              <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-lg p-8 mb-6">
+                <ActivityHeatmap activity={activity} />
+              </div>
+            )}
+
+            {/* Smart Recommendations */}
+            {!loading && !error && (
+              <RecommendationsCard
+                activityCount={totalActivities}
+                lastActivityDate={lastActivityDate}
+                onAction={handleRecommendationAction}
+              />
+            )}
+
+            {/* Activity List */}
+            <div className="bg-white dark:bg-zinc-800 rounded-lg shadow-lg p-8">
+              <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-50 mb-4">
+                Daily Activity (Last 60 Days)
+              </h2>
+
+              {loading && (
+                <div>
+                  <div className="text-center py-6 mb-4">
+                    <Spinner />
+                    <p className="mt-4 text-zinc-600 dark:text-zinc-400">Loading activity...</p>
+                  </div>
+                  <SkeletonList count={5} />
+                </div>
+              )}
+
+              {error && (
+                <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
+                  <p className="text-red-800 dark:text-red-200">
+                    <strong>Error:</strong> {error}
+                  </p>
+                </div>
+              )}
+
+              {!loading && !error && (
+                <div>
+                  {activity.length === 0 ? (
+                    <EmptyState type="activity" onAction={() => openModal("")} />
+                  ) : (
+                    <div className="space-y-2">
+                      {activity.map((item) => (
+                        <div
+                          key={item.day}
+                          className="flex justify-between items-center p-3 bg-zinc-50 dark:bg-zinc-700 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-600 transition-colors"
+                          title={`${item.count} ${item.count === 1 ? "activity" : "activities"} on ${item.day}`}
+                        >
+                          <span className="font-medium text-zinc-900 dark:text-zinc-50">{item.day}</span>
+                          <span className="text-zinc-600 dark:text-zinc-300">
+                            {item.count} {item.count === 1 ? "event" : "events"}
+                          </span>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  )}
                 </div>
               )}
             </div>
-          )}
-        </div>
+          </>
+        )}
       </main>
 
       {/* Log Activity Modal */}
